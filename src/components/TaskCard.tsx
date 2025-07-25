@@ -1,7 +1,8 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Calendar, User, ImageIcon, MoreVertical } from 'lucide-react';
-import { Task } from '@/types/task';
+import { Calendar, User, ImageIcon, MoreVertical, CheckCircle, Clock, Play } from 'lucide-react';
+import { Task, Status } from '@/types/task';
+import { createElement } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (taskId: string) => void;
+  onStatusUpdate: (taskId: string, newStatus: Status) => void;
 }
 
 const priorityColors = {
@@ -33,7 +35,13 @@ const priorityBorderColors = {
   low: 'border-l-priority-low',
 };
 
-export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
+const statusConfig = {
+  todo: { label: 'To Do', icon: Clock, color: 'text-amber-400' },
+  progress: { label: 'In Progress', icon: Play, color: 'text-blue-400' },
+  completed: { label: 'Completed', icon: CheckCircle, color: 'text-emerald-400' },
+};
+
+export function TaskCard({ task, onEdit, onDelete, onStatusUpdate }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -64,11 +72,11 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
       {...attributes}
       {...listeners}
       className={cn(
-        "p-4 cursor-move shadow-task hover:shadow-lg transition-all duration-300",
-        "border-l-4 bg-gradient-card",
+        "p-4 cursor-move shadow-task hover:shadow-elegant transition-all duration-300 group",
+        "border-l-4 bg-gradient-card backdrop-blur-sm border border-border/20",
         priorityBorderColors[task.priority],
-        isDragging && "opacity-50 rotate-2 scale-105",
-        isOverdue && "ring-2 ring-destructive/50"
+        isDragging && "opacity-50 rotate-2 scale-105 shadow-glow",
+        isOverdue && "ring-2 ring-destructive/50 shadow-destructive/25"
       )}
     >
       <div className="space-y-3">
@@ -92,6 +100,21 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
               <DropdownMenuItem onClick={() => onEdit(task)}>
                 Edit Task
               </DropdownMenuItem>
+              {task.status !== 'todo' && (
+                <DropdownMenuItem onClick={() => onStatusUpdate(task.id, 'todo')}>
+                  Mark as To Do
+                </DropdownMenuItem>
+              )}
+              {task.status !== 'progress' && (
+                <DropdownMenuItem onClick={() => onStatusUpdate(task.id, 'progress')}>
+                  Mark as In Progress
+                </DropdownMenuItem>
+              )}
+              {task.status !== 'completed' && (
+                <DropdownMenuItem onClick={() => onStatusUpdate(task.id, 'completed')}>
+                  Mark as Completed
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem 
                 onClick={() => onDelete(task.id)}
                 className="text-destructive focus:text-destructive"
@@ -102,11 +125,17 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
           </DropdownMenu>
         </div>
 
-        {/* Priority Badge */}
-        <div className="flex items-center justify-between">
-          <Badge className={cn("text-xs font-medium", priorityColors[task.priority])}>
-            {task.priority.toUpperCase()}
-          </Badge>
+        {/* Priority and Status Badges */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Badge className={cn("text-xs font-medium", priorityColors[task.priority])}>
+              {task.priority.toUpperCase()}
+            </Badge>
+            <div className={cn("flex items-center gap-1 text-xs", statusConfig[task.status].color)}>
+              {createElement(statusConfig[task.status].icon, { className: "h-3 w-3" })}
+              <span className="font-medium">{statusConfig[task.status].label}</span>
+            </div>
+          </div>
           {isOverdue && (
             <Badge variant="destructive" className="text-xs">
               OVERDUE

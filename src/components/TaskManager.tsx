@@ -10,8 +10,8 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { Plus, Filter, Search } from 'lucide-react';
-import { Task, Priority, TaskFormData } from '@/types/task';
+import { Plus, Filter, Search, Calendar } from 'lucide-react';
+import { Task, Priority, TaskFormData, Status } from '@/types/task';
 import { TaskColumn } from './TaskColumn';
 import { TaskCard } from './TaskCard';
 import { TaskModal } from './TaskModal';
@@ -25,6 +25,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 // Sample data
 const initialTasks: Task[] = [
@@ -77,6 +81,7 @@ export function TaskManager() {
   const [defaultPriority, setDefaultPriority] = useState<Priority>('medium');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<Date | undefined>();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -90,7 +95,9 @@ export function TaskManager() {
     const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          task.assignedTo.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesDate = !dateFilter || 
+      new Date(task.createdAt).toDateString() === dateFilter.toDateString();
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const groupedTasks = {
@@ -180,6 +187,19 @@ export function TaskManager() {
     });
   }, [tasks]);
 
+  const handleStatusUpdate = useCallback((taskId: string, newStatus: Status) => {
+    const task = tasks.find(t => t.id === taskId);
+    setTasks(prev => prev.map(t =>
+      t.id === taskId
+        ? { ...t, status: newStatus, updatedAt: new Date().toISOString() }
+        : t
+    ));
+    toast({
+      title: "Status Updated",
+      description: `Task "${task?.name}" moved to ${newStatus}.`,
+    });
+  }, [tasks]);
+
   const handleSaveTask = useCallback((taskData: TaskFormData, images: string[]) => {
     const timestamp = new Date().toISOString();
     
@@ -241,11 +261,45 @@ export function TaskManager() {
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-gradient-card border-border/50 focus:border-primary/50 transition-colors"
             />
           </div>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-[200px] justify-start text-left font-normal bg-gradient-card border-border/50",
+                  !dateFilter && "text-muted-foreground"
+                )}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                {dateFilter ? format(dateFilter, "PPP") : "Filter by date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent
+                mode="single"
+                selected={dateFilter}
+                onSelect={setDateFilter}
+                initialFocus
+                className="p-3 pointer-events-auto"
+              />
+              <div className="p-3 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setDateFilter(undefined)}
+                  className="w-full"
+                >
+                  Clear Filter
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] bg-gradient-card border-border/50">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -286,6 +340,7 @@ export function TaskManager() {
                 onAddTask={handleAddTask}
                 onEditTask={handleEditTask}
                 onDeleteTask={handleDeleteTask}
+                onStatusUpdate={handleStatusUpdate}
               />
             ))}
           </div>
@@ -296,6 +351,7 @@ export function TaskManager() {
                 task={activeTask}
                 onEdit={() => {}}
                 onDelete={() => {}}
+                onStatusUpdate={() => {}}
               />
             ) : null}
           </DragOverlay>

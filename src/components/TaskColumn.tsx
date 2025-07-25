@@ -1,7 +1,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
-import { Task, Priority } from '@/types/task';
+import { Task, Priority, Status } from '@/types/task';
 import { TaskCard } from './TaskCard';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ interface TaskColumnProps {
   onAddTask: (priority: Priority) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
+  onStatusUpdate: (taskId: string, newStatus: Status) => void;
 }
 
 const priorityConfig = {
@@ -42,7 +43,7 @@ const priorityConfig = {
   },
 };
 
-export function TaskColumn({ priority, tasks, onAddTask, onEditTask, onDeleteTask }: TaskColumnProps) {
+export function TaskColumn({ priority, tasks, onAddTask, onEditTask, onDeleteTask, onStatusUpdate }: TaskColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: priority,
   });
@@ -54,10 +55,10 @@ export function TaskColumn({ priority, tasks, onAddTask, onEditTask, onDeleteTas
     <Card
       ref={setNodeRef}
       className={cn(
-        "p-4 min-h-[500px] transition-all duration-300",
+        "p-6 min-h-[500px] transition-all duration-300 rounded-xl shadow-elegant border-2 border-dashed backdrop-blur-sm",
         config.color,
-        "border-2 border-dashed",
-        isOver && "border-solid shadow-lg scale-[1.02]"
+        "hover:shadow-glow",
+        isOver && "border-solid shadow-primary/25 scale-[1.02] bg-primary/10"
       )}
     >
       {/* Column Header */}
@@ -74,7 +75,7 @@ export function TaskColumn({ priority, tasks, onAddTask, onEditTask, onDeleteTas
           variant="ghost"
           size="sm"
           onClick={() => onAddTask(priority)}
-          className="h-8 w-8 p-0 hover:bg-background"
+          className="h-8 w-8 p-0 hover:bg-primary/10 transition-all duration-200 rounded-lg"
         >
           <Plus className="h-4 w-4" />
         </Button>
@@ -86,9 +87,10 @@ export function TaskColumn({ priority, tasks, onAddTask, onEditTask, onDeleteTas
           {tasks.map((task) => (
             <TaskCard
               key={task.id}
-              task={task}
-              onEdit={onEditTask}
-              onDelete={onDeleteTask}
+                  task={task}
+                  onEdit={onEditTask}
+                  onDelete={onDeleteTask}
+                  onStatusUpdate={onStatusUpdate}
             />
           ))}
           
